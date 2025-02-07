@@ -1,0 +1,29 @@
+version: '3'
+
+volumes:
+  bash-history:
+  vscode-server:
+
+
+services:
+  app:
+    build:
+      dockerfile: dockerfile
+      context: ../
+      target: python
+    env_file:
+    - .env
+    volumes:
+      - .:/app:cached
+      - bash-history:/command-history
+      - vscode-server:/home/${USER_NAME}/.vscode-server
+      - type: tmpfs
+        target: /tmp
+    network_mode: host
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          memory: ${RESOURCES_RAM}
+        limits:
+          memory: ${RESOURCES_RAM}
