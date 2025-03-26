@@ -25,6 +25,7 @@ RUN \
     apt-get update ; \
     apt-get -y install \
     curl \
+    fzf \
     git \
     gpg \
     locales \
@@ -35,11 +36,6 @@ RUN \
     wget \
     zip \
     zsh ;
-
-# Install zoxide et fzf
-RUN \
-    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh ; \
-    apt install fzf
 
 # Gosu installation for host user id adaptation 
 RUN \
@@ -73,13 +69,6 @@ RUN \
     sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen ; \
     locale-gen ;
 
-# Use stow to setup nice home and work tools
-RUN \
-    git clone https://github.com/slacking-eveywhere/dotfiles.git ; \
-    mv dotfiles .dotfiles ; \
-    cd .dotfiles ; \
-    stow --target=/root --adopt */ 
-
 # Set entrypoint with gosu command
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
 
@@ -92,10 +81,13 @@ FROM common AS golang
 ARG GO_VERSION=1.23.4
 
 ENV GO_VERSION=${GO_VERSION}
+ENV TMPDIR=/build
 
 RUN curl -L -o go.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz ; \
     tar -C /usr/local -xzf go.tar.gz ; \
-    rm -rf go.tar.gz
+    rm -rf go.tar.gz ; \
+    mkdir -p ${TMPDIR} ; \
+    chmod 2777 ${TMPDIR}
 
 # Install rust 
 FROM common AS rust
