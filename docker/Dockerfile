@@ -30,12 +30,37 @@ RUN \
     gpg \
     locales \
     stow \
+    tree \
     tzdata \
     unzip \
     vim \
     wget \
     zip \
     zsh ;
+
+# Install docker for dod bevause it's very neat to dod
+RUN \
+    # Add Docker's official GPG key:
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc ; \
+    chmod a+r /etc/apt/keyrings/docker.asc ; \
+    # Add the repository to Apt sources:
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      tee /etc/apt/sources.list.d/docker.list > /dev/null ; \
+    apt-get update ; \
+    apt-get install -y --no-install-recommends \
+        docker-cli \
+        docker-compose
+
+# Clean install 
+RUN \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download fonts
+RUN \
+    curl -OL --output-dir /root https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
 
 # Gosu installation for host user id adaptation 
 RUN \
@@ -101,18 +126,36 @@ ARG PYTHON_VERSION=3.13
 
 ENV PYTHON_VERSION=${PYTHON_VERSION}
 
-RUN apt-get install -y \
-        python${PYTHON_VERSION}-dev
+RUN PY_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1) ; \
+    apt-get update ; \
+    apt-get install -y \
+        python${PYTHON_VERSION}-dev \
+        python${PYTHON_VERSION}-venv \
+        python${PY_MAJOR}-pip
+
+# Clean install 
+RUN \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM common AS ansible
 
-ARG ANSIBLE_VERSION=11.3.0
+ARG ANSIBLE_VERSION=11.4.0
 
 ENV ANSIBLE_VERSION=${ANSIBLE_VERSION}
 
-RUN apt-get install -y pipx ; \
+RUN \
+    apt-get update ; \
+    apt-get install -y \
+        python3-pip \
+        pipx ; \
     pipx ensurepath ; \
     pipx ensurepath --global ; \
     pipx install --global --include-deps ansible==${ANSIBLE_VERSION} ; \
-    pipx install --global ansible-dev-tools ; \
-    pipx install --global ansible-lint
+    pipx inject --global --include-apps ansible ansible-dev-tools ; \
+    pipx inject --global --include-apps ansible ansible-lint
+
+# Clean install 
+RUN \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*

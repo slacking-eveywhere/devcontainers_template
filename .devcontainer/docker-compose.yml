@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ../:/app:cached
+      - ../:/workdir:cached
       - home:/home/${USER}
       # - bash-history:/command-history
       # - vscode-server:/home/${USER}/.vscode-server

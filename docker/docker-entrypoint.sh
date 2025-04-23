@@ -42,15 +42,30 @@ else
         --uid ${USER_ID} \
         ${USER}
     mkdir -p ${HOME}
-    chown ${USER}:${USER} ${HOME} ${WORKDIR}
+
+    # Install fonts
+    mkdir -p ${HOME}/.fonts
+    tar -xf /root/JetBrainsMono.tar.xz -C /${HOME}/.fonts
+
+    chown ${USER}:${USER} ${HOME} ${WORKDIR} /${HOME}/.fonts
 
     # Exec next commmand with gosu
     /usr/local/bin/gosu ${USER} bash -c "\
         cd ${HOME} ; \
+        fc-cache -fv ; \
         curl -sSfL ${ZOXIDE_REPO} | sh ; \
         git clone ${DOTFILE_REPO} .dotfiles ; \
         cd .dotfiles ; \
         stow --target=${HOME} --adopt */ ;"
+fi
+
+if [[ "${DOCKER_GID}" ]]; then
+    if getent group "${DOCKER_GID}" > /dev/null; then
+        echo "Un groupe avec le GID ${DOCKER_GID} existe déjà : $(getent group "${DOCKER_GID}" | cut -d: -f1)"
+    else
+        groupadd -g "${DOCKER_GID}" docker
+        usermod -aG docker $USER
+    fi
 fi
 
 exec /usr/local/bin/gosu ${USER} "$@"
