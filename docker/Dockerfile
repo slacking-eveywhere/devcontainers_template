@@ -1,3 +1,21 @@
+## TODO WORK WITH DEBOOTSTRAP
+
+# FROM debian:stable AS base
+# RUN apt-get update && apt-get install -y debootstrap
+# RUN debootstrap --variant=minbase stable /mnt http://deb.debian.org/debian/
+
+# FROM base AS install-python
+# RUN chroot /mnt apt-get update && chroot /mnt apt-get install -y python3
+
+# FROM install-python AS install-python-ssh
+# RUN chroot /mnt apt-get install -y openssh-server
+
+# FROM scratch AS image-python
+# COPY --from=install-python /mnt/ /
+
+# FROM scratch AS image-python-ssh
+# COPY --from=install-python-ssh /mnt/ /
+
 # Debian image as base (unstable for newest software).
 FROM debian:trixie-slim AS common
 
@@ -24,19 +42,22 @@ RUN \
 RUN \
     apt-get update ; \
     apt-get -y install \
-    curl \
-    fzf \
-    git \
-    gpg \
-    locales \
-    stow \
-    tree \
-    tzdata \
-    unzip \
-    vim \
-    wget \
-    zip \
-    zsh ;
+        curl \
+        xz-utils \
+        shellcheck \
+        shfmt \
+        fzf \
+        git \
+        gpg \
+        locales \
+        stow \
+        tree \
+        tzdata \
+        unzip \
+        vim \
+        wget \
+        zip \
+        zsh ;
 
 # Install docker for dod bevause it's very neat to dod
 RUN \
@@ -55,7 +76,7 @@ RUN \
 
 # Clean install 
 RUN \
-    apt-get clean && \
+    apt-get clean ; \
     rm -rf /var/lib/apt/lists/*
 
 # Download fonts
@@ -99,6 +120,20 @@ ENTRYPOINT [ "/docker-entrypoint.sh" ]
 
 # Expose some ports to host by default.
 EXPOSE 8080 8081 8082 8083 8084 8085
+
+# Install with SSH server
+FROM common AS common-ssh
+
+RUN \
+    apt-get update ; \
+    apt-get install -y \
+        openssh-server ; \
+    ssh-keygen -A ; \
+    sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config ; \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config ; \
+    sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords no/' /etc/ssh/sshd_config ; \
+    apt-get clean ; \
+    rm -rf /var/lib/apt/lists/*
 
 # Install golang 
 FROM common AS golang
@@ -159,3 +194,4 @@ RUN \
 RUN \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
