@@ -36,28 +36,30 @@ USER 0
 RUN \
     mkdir -p /root/.cache ; \
     mkdir -p /root/.config ; \
-    mkdir -p /root/.local ;
+    mkdir -p /root/.local ; \
+    touch /root/.ready
 
 # Install common packages
 RUN \
     apt-get update ; \
     apt-get -y install \
-        curl \
-        xz-utils \
-        shellcheck \
-        shfmt \
-        fzf \
-        git \
-        gpg \
-        locales \
-        stow \
-        tree \
-        tzdata \
-        unzip \
-        vim \
-        wget \
-        zip \
-        zsh ;
+    curl \
+    fontconfig \
+    xz-utils \
+    shellcheck \
+    shfmt \
+    fzf \
+    git \
+    gpg \
+    locales \
+    stow \
+    tree \
+    tzdata \
+    unzip \
+    vim \
+    wget \
+    zip \
+    zsh ;
 
 # Install docker for dod bevause it's very neat to dod
 RUN \
@@ -66,15 +68,15 @@ RUN \
     chmod a+r /etc/apt/keyrings/docker.asc ; \
     # Add the repository to Apt sources:
     echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-      tee /etc/apt/sources.list.d/docker.list > /dev/null ; \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null ; \
     apt-get update ; \
     apt-get install -y --no-install-recommends \
-        docker-cli \
-        docker-compose
+    docker-cli \
+    docker-compose
 
-# Clean install 
+# Clean install
 RUN \
     apt-get clean ; \
     rm -rf /var/lib/apt/lists/*
@@ -83,7 +85,7 @@ RUN \
 RUN \
     curl -OL --output-dir /root https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
 
-# Gosu installation for host user id adaptation 
+# Gosu installation for host user id adaptation
 RUN \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
     wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-$dpkgArch"; \
@@ -127,71 +129,10 @@ FROM common AS common-ssh
 RUN \
     apt-get update ; \
     apt-get install -y \
-        openssh-server ; \
+    openssh-server ; \
     ssh-keygen -A ; \
     sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config ; \
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config ; \
     sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords no/' /etc/ssh/sshd_config ; \
     apt-get clean ; \
     rm -rf /var/lib/apt/lists/*
-
-# Install golang 
-FROM common AS golang
-
-ARG GO_VERSION=1.23.4
-
-ENV GO_VERSION=${GO_VERSION}
-ENV TMPDIR=/build
-
-RUN curl -L -o go.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz ; \
-    tar -C /usr/local -xzf go.tar.gz ; \
-    rm -rf go.tar.gz ; \
-    mkdir -p ${TMPDIR} ; \
-    chmod 2777 ${TMPDIR}
-
-# Install rust 
-FROM common AS rust
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
-# Install python
-FROM common AS python
-
-ARG PYTHON_VERSION=3.13
-
-ENV PYTHON_VERSION=${PYTHON_VERSION}
-
-RUN PY_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1) ; \
-    apt-get update ; \
-    apt-get install -y \
-        python${PYTHON_VERSION}-dev \
-        python${PYTHON_VERSION}-venv \
-        python${PY_MAJOR}-pip
-
-# Clean install 
-RUN \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-FROM common AS ansible
-
-ARG ANSIBLE_VERSION=11.4.0
-
-ENV ANSIBLE_VERSION=${ANSIBLE_VERSION}
-
-RUN \
-    apt-get update ; \
-    apt-get install -y \
-        python3-pip \
-        pipx ; \
-    pipx ensurepath ; \
-    pipx ensurepath --global ; \
-    pipx install --global --include-deps ansible==${ANSIBLE_VERSION} ; \
-    pipx inject --global --include-apps ansible ansible-dev-tools ; \
-    pipx inject --global --include-apps ansible ansible-lint
-
-# Clean install 
-RUN \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
