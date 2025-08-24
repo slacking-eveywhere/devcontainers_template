@@ -1,0 +1,25 @@
+services:
+    maindevcontainer:
+        image: ${DEVCONTAINER_IMAGE_NAME}
+        env_file:
+            - .env
+        volumes:
+            - workdir:/workdir:cached
+            - home:/home/${USER}
+            - type: tmpfs
+              target: /tmp
+        ports:
+            - "2202:22"
+        tty: true
+        stdin_open: true
+        command: ["sleep", "infinity"]
+        deploy:
+            resources:
+                reservations:
+                    memory: ${RESOURCES_RAM:-2G}
+                limits:
+                    memory: ${RESOURCES_RAM:-2G}
+
+volumes:
+    home:
+    workdir:
