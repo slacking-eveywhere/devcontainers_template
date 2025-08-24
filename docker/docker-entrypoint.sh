@@ -20,16 +20,17 @@ export HOME=/home/$USER
 export WORKDIR=/workdir
 
 # Check if the user exists
-USER_EXISTS=$(id -u "$USER" 2>/dev/null || true)
+USER_EXISTS_ID=$(id -u "$USER" 2>/dev/null || true)
 
 # Check if the UID exists
 UID_EXISTS=$(getent passwd "$USER_ID" || true)
 
-if [[ -n "${USER_EXISTS}" ]]; then
-	if [[ "${USER_EXISTS}" -ne "$USER_ID" ]]; then
+if [[ -n "$USER_EXISTS_ID" ]]; then
+	if [[ "$USER_EXISTS_ID" -ne "$USER_ID" ]]; then
+		echo "User has not the same ID, $USER_ID"
 		usermod -u "$USER_ID" "$USER"
 	fi
-elif [[ -n "${UID_EXISTS}" ]]; then
+elif [[ -n "$UID_EXISTS" ]]; then
 	EXISTING_USER=$(getent passwd "$USER_ID" | cut -d: -f1)
 	usermod -l "$USER" "${EXISTING_USER}"
 	usermod -d "/home/$USER" -m "$USER"
@@ -49,11 +50,16 @@ else
 		"$USER"
 	mkdir -p "$HOME"
 
+	chown "$USER":"$USER" "$HOME" "$WORKDIR"
+
+fi
+
+if [[ ! -f "$HOME"/.installed ]]; then
 	# Install fonts
 	mkdir -p "$HOME"/.fonts
 	tar -xf /root/JetBrainsMono.tar.xz -C /"$HOME"/.fonts
 
-	chown "$USER":"$USER" "$HOME" "$WORKDIR" /"$HOME"/.fonts
+	chown "$USER":"$USER" /"$HOME"/.fonts
 
 	# Exec next commmand with gosu
 	/usr/local/bin/gosu "$USER" bash -c "\
@@ -63,20 +69,22 @@ else
         git clone $DOTFILE_REPO .dotfiles ; \
         cd .dotfiles ; \
         stow --target=$HOME --adopt */ ;"
+
+	touch "$HOME"/.installed
 fi
 
 if [[ ! -z "$DOCKER_GID" ]]; then
-	if getent group "$DOCKER_GID" >/dev/null; then
-		echo "Un groupe avec le GID $DOCKER_GID existe déjà : $(getent group "$DOCKER_GID" | cut -d: -f1)"
+	if getent group docker >/dev/null; then
+		groupmod -g "$DOCKER_GID" docker || true
 	else
 		groupadd -g "$DOCKER_GID" docker
-		usermod -aG docker $USER
 	fi
+	usermod -aG docker $USER
 fi
 
 if [[ -f "/usr/sbin/sshd" ]]; then
 	echo "Starting sshd as daemon for remote server"
-	mkdir "$HOME"/.ssh
+	mkdir -p "$HOME"/.ssh
 	touch "$HOME"/.ssh/authorized_keys
 
 	chown -R "$USER":"$USER" "$HOME"/.ssh
