@@ -115,7 +115,12 @@ run() {
 	fi
 
 	echo "Starting compose"
-	docker compose -p "$PROJECT_NAME" up -d --pull always
+	docker compose \
+		-f ssh/docker-compose.yml \
+		-p "$PROJECT_NAME" \
+		up \
+		-d \
+		--pull always
 
 	RUNNING_DEV_CONTAINER_ID=$(docker ps -q --filter=name="$PROJECT_NAME"-maindevcontainer-1)
 	if [[ -n "$RUNNING_DEV_CONTAINER_ID" ]]; then
@@ -159,7 +164,25 @@ stop() {
 }
 
 connect() {
-	ssh
+	local PORT SSH_HOST
+
+	while [[ "$#" -ne 0 ]]; do
+		case "$1" in
+		--port)
+			PORT="$2"
+			shift 2
+			;;
+		--host)
+			SSH_HOST="$2"
+			shift 2
+			;;
+		*)
+			echo "Unknown parameter $1"
+			exit 1
+			;;
+		esac
+	done
+	ssh -p "$PORT" "$SSH_HOST"
 }
 
 case $1 in
@@ -177,6 +200,10 @@ run)
 stop)
 	shift 1
 	stop "$@"
+	;;
+connect)
+	shift 1
+	connect "$@"
 	;;
 *)
 	echo "Unknown parameter $1"
