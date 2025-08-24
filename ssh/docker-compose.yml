@@ -1,3 +1,9 @@
+#example of .env file
+#USER=luc
+#USER_ID=1000
+#DEVCONTAINER_IMAGE_NAME=registry.site-lambda.fr:5000/devcontainer-golang-ssh
+#RESOURCES_RAM=4G
+
 services:
     maindevcontainer:
         image: ${DEVCONTAINER_IMAGE_NAME}
