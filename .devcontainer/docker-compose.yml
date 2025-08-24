@@ -9,8 +9,6 @@ services:
         volumes:
             - ../:/workdir:cached
             - home:/home/${USER}
-            # - bash-history:/command-history
-            # - vscode-server:/home/${USER}/.vscode-server
             - type: tmpfs
               target: /tmp
         network_mode: host
