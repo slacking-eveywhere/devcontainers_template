@@ -182,7 +182,7 @@ connect() {
 			;;
 		esac
 	done
-	ssh -p "$PORT" "$SSH_HOST"
+	ssh -A -p "$PORT" "$SSH_HOST"
 }
 
 case $1 in
