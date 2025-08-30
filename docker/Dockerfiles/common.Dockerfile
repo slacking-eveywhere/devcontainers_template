@@ -1,21 +1,3 @@
-## TODO WORK WITH DEBOOTSTRAP
-
-# FROM debian:stable AS base
-# RUN apt-get update && apt-get install -y debootstrap
-# RUN debootstrap --variant=minbase stable /mnt http://deb.debian.org/debian/
-
-# FROM base AS install-python
-# RUN chroot /mnt apt-get update && chroot /mnt apt-get install -y python3
-
-# FROM install-python AS install-python-ssh
-# RUN chroot /mnt apt-get install -y openssh-server
-
-# FROM scratch AS image-python
-# COPY --from=install-python /mnt/ /
-
-# FROM scratch AS image-python-ssh
-# COPY --from=install-python-ssh /mnt/ /
-
 # Debian image as base (unstable for newest software).
 FROM debian:trixie-slim AS common
 
