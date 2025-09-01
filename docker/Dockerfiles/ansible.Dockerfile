@@ -1,4 +1,4 @@
-FROM common AS ansible
+FROM common AS base
 
 ARG ANSIBLE_VERSION=11.4.0
 

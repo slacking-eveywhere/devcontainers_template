@@ -1,6 +1,7 @@
 # Install golang
-ARG REGISTRY=""
-FROM ${REGISTRY}common AS golang
+ARG REGISTRY="docker.io"
+ARG COMMON_VERSION="latest"
+FROM ${REGISTRY}/common:${COMMON_VERSION} AS base
 
 ARG GO_VERSION=1.23.4
 
@@ -13,6 +14,6 @@ RUN curl -L -o go.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz ; 
     mkdir -p ${TMPDIR} ; \
     chmod 2777 ${TMPDIR}
 
-FROM ${REGISTRY}common-ssh AS golang-ssh
+FROM ${REGISTRY}/common-ssh:${COMMON_VERSION} AS base-ssh
 
 COPY --from=golang /usr/local /usr/local

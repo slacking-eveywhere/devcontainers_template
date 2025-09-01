@@ -1,6 +1,7 @@
 # Install python
-ARG REGISTRY=""
-FROM ${REGISTRY}common AS python
+ARG REGISTRY="docker.io"
+ARG COMMON_VERSION="latest"
+FROM ${REGISTRY}/common:${COMMON_VERSION} AS base
 
 ARG PYTHON_VERSION=3.13
 
@@ -18,5 +19,4 @@ RUN \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-ARG REGISTRY=""
-FROM ${REGISTRY}common-ssh AS python-ssh
+FROM ${REGISTRY}/common-ssh:${COMMON_VERSION} AS base-ssh

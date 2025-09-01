@@ -1,5 +1,11 @@
 # Debian image as base (unstable for newest software).
-FROM debian:trixie-slim AS common
+
+ARG REGISTRY="docker.io"
+ARG DEBIAN_VERSION="trixie-slim"
+ARG GOSU_VERSION="1.17"
+FROM ${REGISTRY}/debian:${DEBIAN_VERSION} AS common
+
+ARG GOSU_VERSION
 
 # Set image locale.
 ENV LANG=en_US.UTF-8
@@ -8,7 +14,7 @@ ENV TZ=Europe/Paris
 
 ENV USER=
 ENV USER_ID=
-ENV GOSU_VERSION=1.17
+ENV GOSU_VERSION=${GOSU_VERSION}
 
 WORKDIR /root
 

@@ -1,21 +1,15 @@
-#example of .env file
-#USER=luc
-#USER_ID=1000
-#DEVCONTAINER_IMAGE_NAME=registry.site-lambda.fr:5000/devcontainer-golang-ssh
-#RESOURCES_RAM=4G
-
 services:
     maindevcontainer:
         image: ${DEVCONTAINER_IMAGE_NAME}
         env_file:
             - .env
         volumes:
-            - workdir:/workdir:cached
-            - home:/home/${USER}
-            - type: tmpfs
-              target: /tmp
+            - workdir:/workdir
+            - home:/home
+        tmpfs: /tmp:exec,mode=1777
         ports:
             - "2202:22"
+            - "8081:8080"
         tty: true
         stdin_open: true
         command: ["sleep", "infinity"]
