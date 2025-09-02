@@ -11,4 +11,4 @@ else
 	git clone https://github.com/slacking-eveywhere/devcontainers_template.git
 fi
 
-cp devcontainer.sh "$PROJECTS_BIN_DIR"/devcontainer
+cp "$PROJECTS_TOP_DIR"/devcontainer.sh "$PROJECTS_BIN_DIR"/devcontainer
