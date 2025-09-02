@@ -35,7 +35,8 @@ run() {
 
 	echo "Starting compose"
 	docker compose \
-		-f ssh/docker-compose.yml \
+		-f templates/docker-compose-ssh.yml \
+		-f projects/"$PROJECT_NAME"/docker-compose.yml \
 		-p "$PROJECT_NAME" \
 		up \
 		-d \
@@ -124,7 +125,12 @@ new() {
 
 	local ENV_FILE_TEMPLATE COMPOSE_FILE_TEMPLATE PROJECT_DIR FORCE
 
-	PROJECT_DIR="$PROJECTS_TOP_DIR"/"$PROJECT_NAME"
+	if [[ -z "$PROJECT_NAME" ]]; then
+		echo "Missing projet name"
+		exit 1
+	fi
+
+	PROJECT_DIR=projects/"$PROJECT_NAME"
 	FORCE="false"
 
 	ENV_FILE_TEMPLATE="$PROJECT_DIR"/.env
@@ -159,11 +165,6 @@ new() {
 
 	if [[ ! -f "$COMPOSE_FILE_TEMPLATE" ]] || [[ "$FORCE" == "true" ]]; then
 		cat <<-EOF >"$COMPOSE_FILE_TEMPLATE"
-			services:
-			    maindevcontainer:
-			        ports:
-			            - "2202:22"
-			            - "8081:8080"
 		EOF
 	else
 		echo "The file $COMPOSE_FILE_TEMPLATE exists. Not overwritting"
@@ -175,7 +176,7 @@ edit() {
 
 	local PROJECT_DIR ENV_FILE_TEMPLATE COMPOSE_FILE_TEMPLATE EDIT_COMPOSE
 
-	PROJECT_DIR="$PROJECTS_TOP_DIR"/"$PROJECT_NAME"
+	PROJECT_DIR=projects/"$PROJECT_NAME"
 
 	EDIT_COMPOSE="false"
 
@@ -204,7 +205,7 @@ edit() {
 
 }
 
-PROJECTS_TOP_DIR="$HOME/.local/share/devcontainer/"
+PROJECTS_TOP_DIR="$HOME/.local/share/devcontainers_template/projects"
 DEVCONTAINER_ROOT_FOLDER="devcontainers_template"
 
 case $1 in

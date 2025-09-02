@@ -1,0 +1,17 @@
+{
+    "name": "changeme",
+    "dockerComposeFile": ["docker-compose.yml"],
+    "workspaceFolder": "/workdir",
+    "service": "app",
+    "customizations": {
+        "vscode": {
+            "forwardPorts": [4321],
+            "settings": {
+                "remote": {
+                    "restoreForwardedPorts": true,
+                    "localPortHost": "0.0.0.0"
+                }
+            }
+        }
+    }
+}
