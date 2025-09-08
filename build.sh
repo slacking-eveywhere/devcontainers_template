@@ -14,7 +14,7 @@ while [[ "$#" -ne 0 ]]; do
 		REGISTRY="$2"
 
 		if [[ "${REGISTRY: -1}" != "/" ]]; then
-			REGISTRY="$REGISTRY"/
+			export REGISTRY="$REGISTRY"/
 		fi
 		shift 2
 		;;
@@ -41,7 +41,7 @@ if [[ "$COMMON" == "true" ]]; then
 fi
 
 if [[ -z "$LANGUAGE_NAME" ]]; then
-	echo "No language name set"
+	echo "No language name found."
 	"${CMD[@]}"
 else
 	CMD+=("$LANGUAGE_NAME")

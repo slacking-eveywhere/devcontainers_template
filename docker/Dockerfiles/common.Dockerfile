@@ -1,9 +1,9 @@
 # Debian image as base (unstable for newest software).
 
-ARG REGISTRY="docker.io"
+ARG REGISTRY=""
 ARG DEBIAN_VERSION="trixie-slim"
 ARG GOSU_VERSION="1.17"
-FROM ${REGISTRY}/debian:${DEBIAN_VERSION} AS common
+FROM debian:${DEBIAN_VERSION} AS common
 
 ARG GOSU_VERSION
 
@@ -39,6 +39,7 @@ RUN \
     fzf \
     git \
     gpg \
+    make \
     locales \
     stow \
     tree \
@@ -62,6 +63,7 @@ RUN \
     apt-get update ; \
     apt-get install -y --no-install-recommends \
     docker-cli \
+    docker-buildx \
     docker-compose
 
 # Clean install

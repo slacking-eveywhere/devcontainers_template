@@ -1,6 +1,5 @@
-
 variable "REGISTRY" {
-  default = "registry.site-lambda.fr:5000"
+  default = ""
 }
 
 variable "COMMON_VERSION" {
@@ -24,11 +23,11 @@ target "common" {
     dockerfile = "Dockerfiles/common.Dockerfile"
     targets = ["common", "common-ssh"]
     args = {
-        REGISTRY="docker.io"
-        DEBIAN_VERSION="trixie-slim"
-        GOSU_VERSION="1.17"
+        REGISTRY = REGISTRY
+        DEBIAN_VERSION = "trixie-slim"
+        GOSU_VERSION = "1.17"
     }
-    tags = ["${REGISTRY}/common:trixie-slim", "${REGISTRY}/common-ssh:trixie-slim"]
+    tags = ["${REGISTRY}common:trixie-slim", "${REGISTRY}common-ssh:trixie-slim"]
 }
 
 target "go-1-23-4" {
@@ -40,7 +39,7 @@ target "go-1-23-4" {
         REGISTRY = REGISTRY,
         COMMON_VERSION = COMMON_VERSION
     }
-    tags = ["${REGISTRY}/devcontainer-golang:1.23.4", "${REGISTRY}/devcontainer-golang-ssh:1.23.4"]
+    tags = ["${REGISTRY}devcontainer-golang:1.23.4", "${REGISTRY}devcontainer-golang-ssh:1.23.4"]
 }
 
 target "python-3-13" {
@@ -52,7 +51,7 @@ target "python-3-13" {
         REGISTRY = REGISTRY,
         COMMON_VERSION = COMMON_VERSION
     }
-    tags = ["${REGISTRY}/devcontainer-python:3.13", "${REGISTRY}/devcontainer-python-ssh:3.13"]
+    tags = ["${REGISTRY}devcontainer-python:3.13", "${REGISTRY}devcontainer-python-ssh:3.13"]
 }
 
 target "rust" {
@@ -63,5 +62,5 @@ target "rust" {
         REGISTRY = REGISTRY,
         COMMON_VERSION = COMMON_VERSION
     }
-    tags = ["${REGISTRY}/devcontainer-rust:latest", "${REGISTRY}/devcontainer-rust-ssh:latest"]
+    tags = ["${REGISTRY}devcontainer-rust:latest", "${REGISTRY}devcontainer-rust-ssh:latest"]
 }
