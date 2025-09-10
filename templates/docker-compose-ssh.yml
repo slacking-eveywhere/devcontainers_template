@@ -1,6 +1,6 @@
 services:
     maindevcontainer:
-        image: "${DEVCONTAINER_IMAGE_NAME}"
+        image: "${DEVCONTAINER_IMAGE_NAME:-bash:5}"
         env_file:
             - .env
         volumes:
