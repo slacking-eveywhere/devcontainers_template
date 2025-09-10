@@ -5,11 +5,10 @@ init() {
 }
 
 run() {
-	local ENV_FILE SSH_PUBLIC_KEY PROJECT_NAME RUNNING_DEV_CONTAINER_ID USER
+	local SSH_PUBLIC_KEY PROJECT_NAME RUNNING_DEV_CONTAINER_ID USER
 
-	while getopts ":e:s:p:" opt; do
+	while getopts ":s:p:" opt; do
 		case ${opt} in
-		e) ENV_FILE=${OPTARG} ;;
 		s) SSH_PUBLIC_KEY=${OPTARG} ;;
 		p) PROJECT_NAME=${OPTARG} ;;
 		\?)
