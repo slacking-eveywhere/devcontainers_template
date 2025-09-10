@@ -3,7 +3,7 @@ variable "REGISTRY" {
 }
 
 variable "COMMON_VERSION" {
-    default = "latest"
+    default = "trixie-slim"
 }
 
 group "default" {
