@@ -21,14 +21,14 @@ WORKDIR /root
 USER 0
 
 # Create root local configs directories
-RUN \
+RUN set -e ; \
     mkdir -p /root/.cache ; \
     mkdir -p /root/.config ; \
     mkdir -p /root/.local ; \
     touch /root/.ready
 
 # Install common packages
-RUN \
+RUN set -e ; \
     apt-get update ; \
     apt-get -y install \
     curl \
@@ -51,7 +51,7 @@ RUN \
     zsh ;
 
 # Install docker for dod bevause it's very neat to dod
-RUN \
+RUN set -e ; \
     # Add Docker's official GPG key:
     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc ; \
     chmod a+r /etc/apt/keyrings/docker.asc ; \
@@ -62,21 +62,22 @@ RUN \
     tee /etc/apt/sources.list.d/docker.list > /dev/null ; \
     apt-get update ; \
     apt-get install -y --no-install-recommends \
-    docker-cli \
-    docker-buildx \
-    docker-compose
+    docker-ce-cli \
+    containerd.io \
+    docker-buildx-plugin \
+    docker-compose-plugin
 
 # Clean install
-RUN \
+RUN set -e ; \
     apt-get clean ; \
     rm -rf /var/lib/apt/lists/*
 
 # Download fonts
-RUN \
+RUN set -e ; \
     curl -OL --output-dir /root https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
 
 # Gosu installation for host user id adaptation
-RUN \
+RUN set -e ; \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
     wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-$dpkgArch"; \
     wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-$dpkgArch.asc"; \
@@ -100,7 +101,7 @@ COPY locale.conf /etc/default/locale.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 # Add docker entrypoint and set locale
-RUN \
+RUN set -e ; \
     chmod +x /docker-entrypoint.sh ; \
     mkdir /workdir ; \
     dpkg-reconfigure locales ; \
@@ -116,7 +117,7 @@ EXPOSE 8080 8081 8082 8083 8084 8085
 # Install with SSH server
 FROM common AS common-ssh
 
-RUN \
+RUN set -e ; \
     apt-get update ; \
     apt-get install -y \
     openssh-server ; \

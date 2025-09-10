@@ -4,7 +4,7 @@ ARG ANSIBLE_VERSION=11.4.0
 
 ENV ANSIBLE_VERSION=${ANSIBLE_VERSION}
 
-RUN \
+RUN set -e ; \
     apt-get update ; \
     apt-get install -y \
     python3-pip \
@@ -16,6 +16,6 @@ RUN \
     pipx inject --global --include-apps ansible ansible-lint
 
 # Clean install
-RUN \
+RUN set -e ; \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

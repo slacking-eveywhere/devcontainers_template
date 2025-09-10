@@ -7,7 +7,8 @@ ARG PYTHON_VERSION=3.13
 
 ENV PYTHON_VERSION=${PYTHON_VERSION}
 
-RUN PY_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1) ; \
+RUN set -e ; \
+    PY_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1) ; \
     apt-get update ; \
     apt-get install -y \
     python${PYTHON_VERSION}-dev \
@@ -15,7 +16,7 @@ RUN PY_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1) ; \
     python${PY_MAJOR}-pip
 
 # Clean install
-RUN \
+RUN set -e ; \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
