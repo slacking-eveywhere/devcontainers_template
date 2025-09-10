@@ -97,6 +97,11 @@ if [[ ! -z "$DOCKER_GID" ]]; then
 	usermod -aG docker $USER
 fi
 
+# Remove useless and strange symlink fucking up with docker buildx.
+if [[ -f "$HOME"/.docker/cli-plugins/docker-buildx ]]; then
+	rm -rf "$HOME"/.docker/cli-plugins/docker-buildx
+fi
+
 if [[ -f "/usr/sbin/sshd" ]]; then
 	echo "Starting sshd as daemon for remote server"
 	mkdir -p "$HOME"/.ssh
