@@ -5,24 +5,19 @@ init() {
 }
 
 run() {
-	local ENV_FILE SSH_PUBLIC_KEY PROJECT_NAME RUNNING_DEV_CONTAINER_ID
+	local ENV_FILE SSH_PUBLIC_KEY PROJECT_NAME RUNNING_DEV_CONTAINER_ID USER
 
-	while [[ "$#" -ne 0 ]]; do
-		case "$1" in
-		--env-file | -e)
-			ENV_FILE="$2"
-			shift 2
+	while getopts ":e:s:p:" opt; do
+		case ${opt} in
+		e) ENV_FILE=${OPTARG} ;;
+		s) SSH_PUBLIC_KEY=${OPTARG} ;;
+		p) PROJECT_NAME=${OPTARG} ;;
+		\?)
+			echo "Invalid option: -${OPTARG}" >&2
+			exit 1
 			;;
-		--ssh-key | -s)
-			SSH_PUBLIC_KEY="$2"
-			shift 2
-			;;
-		--project-name | -p)
-			PROJECT_NAME="$2"
-			shift 2
-			;;
-		*)
-			echo "Unknown parameter $1"
+		:)
+			echo "Option -${OPTARG} requires an argument." >&2
 			exit 1
 			;;
 		esac
@@ -32,11 +27,16 @@ run() {
 		echo "Set a project name -p"
 		exit 1
 	fi
+	local project_compose_file="$PROJECTS_TOP_DIR"/"$PROJECT_NAME"/docker-compose.yml
+	if [[ ! -f "$project_compose_file" ]]; then
+		echo "Project compose file not found at $project_compose_file"
+		exit 1
+	fi
 
 	echo "Starting compose"
 	docker compose \
-		-f templates/docker-compose-ssh.yml \
-		-f projects/"$PROJECT_NAME"/docker-compose.yml \
+		-f "$TOP_DIR"/templates/docker-compose-ssh.yml \
+		-f "$PROJECTS_TOP_DIR"/"$PROJECT_NAME"/docker-compose.yml \
 		-p "$PROJECT_NAME" \
 		up \
 		-d \
@@ -46,17 +46,35 @@ run() {
 	if [[ -n "$RUNNING_DEV_CONTAINER_ID" ]]; then
 		if [[ -f "$SSH_PUBLIC_KEY" ]]; then
 			timeout=30
-			echo "Waiting for container to start"
+			is_running="false"
+
+			echo -n "Waiting for container to start "
 			while [ $timeout -gt 0 ]; do
-				result=$(docker exec "$RUNNING_DEV_CONTAINER_ID" bash -c 'cat /root/.ready')
+				result=$(docker exec "$RUNNING_DEV_CONTAINER_ID" bash -c 'cat /root/.ready' 2>/dev/null)
 				if [ "$result" = "1" ]; then
+					is_running="true"
 					break
 				fi
+				printf "|"
 				sleep 1
 				timeout=$((timeout - 1))
 			done
+			echo ""
+
+			if [[ "$is_running" == "false" ]]; then
+				echo "Container did not start. Something went wrong."
+				echo "Check your entrypoint's logs."
+				exit 1
+			fi
+
 			echo "The container is running at ID: $RUNNING_DEV_CONTAINER_ID"
 			USER=$(docker exec "$RUNNING_DEV_CONTAINER_ID" bash -c 'echo $USER')
+
+			if [[ -z "$USER" ]]; then
+				echo "Can't retrieve user from container"
+				exit 1
+			fi
+
 			echo "Devcontainer user $USER"
 
 			if [[ -f ~/.gitconfig ]]; then
@@ -72,14 +90,16 @@ run() {
 }
 
 stop() {
-	while [[ "$#" -ne 0 ]]; do
-		case "$1" in
-		-p)
-			PROJECT_NAME="$2"
-			shift 2
+	local PROJECT_NAME
+	while getopts ":p:" opt; do
+		case ${opt} in
+		p) PROJECT_NAME=${OPTARG} ;;
+		\?)
+			echo "Invalid option: -${OPTARG}" >&2
+			exit 1
 			;;
-		*)
-			echo "Unknown parameter $1"
+		:)
+			echo "Option -${OPTARG} requires an argument." >&2
 			exit 1
 			;;
 		esac
@@ -90,22 +110,21 @@ stop() {
 connect() {
 	local PORT SSH_HOST
 
-	while [[ "$#" -ne 0 ]]; do
-		case "$1" in
-		--port)
-			PORT="$2"
-			shift 2
+	while getopts ":p:h:" opt; do
+		case ${opt} in
+		p) PORT=${OPTARG} ;;
+		h) SSH_HOST=${OPTARG} ;;
+		\?)
+			echo "Invalid option: -${OPTARG}" >&2
+			exit 1
 			;;
-		--host)
-			SSH_HOST="$2"
-			shift 2
-			;;
-		*)
-			echo "Unknown parameter $1"
+		:)
+			echo "Option -${OPTARG} requires an argument." >&2
 			exit 1
 			;;
 		esac
 	done
+
 	ssh -A -p "$PORT" "$SSH_HOST"
 }
 
@@ -130,7 +149,7 @@ new() {
 		exit 1
 	fi
 
-	PROJECT_DIR=projects/"$PROJECT_NAME"
+	PROJECT_DIR="$PROJECTS_TOP_DIR"/"$PROJECT_NAME"
 	FORCE="false"
 
 	ENV_FILE_TEMPLATE="$PROJECT_DIR"/.env
@@ -165,6 +184,10 @@ new() {
 
 	if [[ ! -f "$COMPOSE_FILE_TEMPLATE" ]] || [[ "$FORCE" == "true" ]]; then
 		cat <<-EOF >"$COMPOSE_FILE_TEMPLATE"
+			services:
+			    maindevcontainer:
+			        env_file:
+			          - $ENV_FILE_TEMPLATE
 		EOF
 	else
 		echo "The file $COMPOSE_FILE_TEMPLATE exists. Not overwritting"
@@ -176,7 +199,7 @@ edit() {
 
 	local PROJECT_DIR ENV_FILE_TEMPLATE COMPOSE_FILE_TEMPLATE EDIT_COMPOSE
 
-	PROJECT_DIR=projects/"$PROJECT_NAME"
+	PROJECT_DIR="$PROJECTS_TOP_DIR"/"$PROJECT_NAME"
 
 	EDIT_COMPOSE="false"
 
@@ -205,14 +228,52 @@ edit() {
 
 }
 
+inspect() {
+	local PROJECT_NAME="$1"
+	docker compose \
+		-f "$TOP_DIR"/templates/docker-compose-ssh.yml \
+		-f "$PROJECTS_TOP_DIR"/"$PROJECT_NAME"/docker-compose.yml \
+		config
+}
+
+help() {
+	cat <<-EOF
+		Usage: devcontainer.sh <command> [<args>]
+
+		Commands:
+		  init                      Copy .devcontainer folder to the current directory
+		  new <project_name> [-f]   Create a new project
+		  edit <project_name> [-c]  Edit a project's .env or docker-compose.yml file
+		  inspect <project_name>    Display aggregated docker compose (eg. template and modified compose) with config method
+		  run                       Run a devcontainer
+		  stop                      Stop a devcontainer
+		  list                      List running devcontainers
+		  connect                   Connect to a running devcontainer via SSH
+		  help                      Show this help message
+	EOF
+}
+
+check_prerequisites() {
+	if ! command -v jq >/dev/null 2>&1; then
+		echo "jq is not installed. Please install it to use the list command."
+		exit 1
+	fi
+}
+
+TOP_DIR="$HOME/.local/share/devcontainers_template"
 PROJECTS_TOP_DIR="$HOME/.local/share/devcontainers_template/projects"
 DEVCONTAINER_ROOT_FOLDER="devcontainers_template"
+
+if [[ ! -d "$PROJECTS_TOP_DIR" ]]; then
+	mkdir "$PROJECTS_TOP_DIR"
+fi
 
 case $1 in
 init)
 	init
 	;;
 list)
+	check_prerequisites
 	docker compose ls --format json |
 		jq -c --arg folder "$DEVCONTAINER_ROOT_FOLDER" '.[] | select( .ConfigFiles | contains($folder))' |
 		while read -r object; do
@@ -220,6 +281,11 @@ list)
 			status=$(echo "$object" | jq -r '.Status')
 			echo "$name | $status"
 		done
+	;;
+inspect)
+	shift 1
+	check_prerequisites
+	inspect "$@"
 	;;
 new)
 	shift 1
@@ -241,8 +307,11 @@ connect)
 	shift 1
 	connect "$@"
 	;;
+help)
+	help
+	;;
 *)
-	echo "Unknown parameter $1"
+	help
 	exit 1
 	;;
 esac
