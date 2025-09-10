@@ -56,19 +56,34 @@ fi
 
 if [[ ! -f "$HOME"/.installed ]]; then
 	# Install fonts
-	mkdir -p "$HOME"/.fonts
-	tar -xf /root/JetBrainsMono.tar.xz -C /"$HOME"/.fonts
+	FONT_DIR="$HOME"/.local/share/fonts
+	mkdir -p "$FONT_DIR"/.local/share/fonts
+	tar -xf /root/JetBrainsMono.tar.xz -C "$FONT_DIR"
 
-	chown "$USER":"$USER" /"$HOME"/.fonts
+	chown "$USER":"$USER" -R "$HOME"
+
+	# Install zoxide globally
+	curl -sSfL "$ZOXIDE_REPO" | sh
 
 	# Exec next commmand with gosu
-	/usr/local/bin/gosu "$USER" bash -c "\
-        cd $HOME ; \
-        fc-cache -fv ; \
-        curl -sSfL $ZOXIDE_REPO | sh ; \
-        git clone $DOTFILE_REPO .dotfiles ; \
-        cd .dotfiles ; \
-        stow --target=$HOME --adopt */ ;"
+	# shellcheck disable=SC2016
+	/usr/local/bin/gosu "$USER" bash -c '
+        set -e
+
+        dotfile_repo="$1"
+        home="$2"
+
+        cd "$home"
+        fc-cache -fv
+
+        if [ ! -d .dotfiles ]; then
+            git clone "$dotfile_repo" .dotfiles
+        fi
+
+        cd .dotfiles
+        git pull
+        stow --target="$home" --adopt */
+    ' bash "$DOTFILE_REPO" "$HOME"
 
 	touch "$HOME"/.installed
 fi
