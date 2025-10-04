@@ -12,6 +12,9 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV TZ=Europe/Paris
 
+ENV YQ_VERSION=v4.47.2
+ENV YQ_BINARY=yq_linux_amd64
+
 ENV USER=
 ENV USER_ID=
 ENV GOSU_VERSION=${GOSU_VERSION}
@@ -36,6 +39,8 @@ RUN set -e ; \
     xz-utils \
     shellcheck \
     shfmt \
+    age \
+    jq \
     fzf \
     git \
     gpg \
@@ -48,7 +53,10 @@ RUN set -e ; \
     vim \
     wget \
     zip \
+    sudo \
     zsh ;
+
+RUN wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY} -O /usr/local/bin/yq && chmod +x /usr/local/bin/yq
 
 # Install docker for dod bevause it's very neat to dod
 RUN set -e ; \

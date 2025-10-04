@@ -62,6 +62,8 @@ if [[ ! -f "$HOME"/.installed ]]; then
 
 	chown "$USER":"$USER" -R "$HOME"
 
+	echo "$USER ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
+
 	# Install zoxide globally
 	curl -sSfL "$ZOXIDE_REPO" | sh
 
