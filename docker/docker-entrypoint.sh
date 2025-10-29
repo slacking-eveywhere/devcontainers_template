@@ -62,8 +62,6 @@ if [[ ! -f "$HOME"/.installed ]]; then
 
 	chown "$USER":"$USER" -R "$HOME"
 
-	echo "$USER ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
-
 	# Install zoxide globally
 	curl -sSfL "$ZOXIDE_REPO" | sh
 
@@ -90,13 +88,16 @@ if [[ ! -f "$HOME"/.installed ]]; then
 	touch "$HOME"/.installed
 fi
 
+echo "$USER ALL=(ALL) NOPASSWD: ALL" | tee "/etc/sudoers.d/$USER" > /dev/null
+chmod 440 "/etc/sudoers.d/$USER"
+
 if [[ ! -z "$DOCKER_GID" ]]; then
 	if getent group docker >/dev/null; then
 		groupmod -g "$DOCKER_GID" docker || true
 	else
 		groupadd -g "$DOCKER_GID" docker
 	fi
-	usermod -aG docker $USER
+	usermod -aG docker "$USER"
 fi
 
 # Remove useless and strange symlink fucking up with docker buildx.
