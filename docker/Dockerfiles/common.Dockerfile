@@ -40,6 +40,7 @@ RUN set -e ; \
     shellcheck \
     shfmt \
     age \
+    lazygit \
     jq \
     fzf \
     git \
