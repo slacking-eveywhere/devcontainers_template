@@ -12,4 +12,4 @@ else
 	cd - || exit
 fi
 
-cp "$PROJECTS_TOP_DIR"/devcontainer.sh "$PROJECTS_BIN_DIR"/devcontainer
+cp "$PROJECTS_TOP_DIR"/devcontainer "$PROJECTS_BIN_DIR"/devcontainer
