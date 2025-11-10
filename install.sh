@@ -9,6 +9,7 @@ if [[ -d "$PROJECTS_TOP_DIR" ]]; then
 else
 	cd "$HOME"/.local/share/ || exit
 	git clone https://github.com/slacking-eveywhere/devcontainers_template.git
+	cd - || exit
 fi
 
 cp "$PROJECTS_TOP_DIR"/devcontainer.sh "$PROJECTS_BIN_DIR"/devcontainer
