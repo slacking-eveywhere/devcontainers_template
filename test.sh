@@ -7,9 +7,10 @@ set -o pipefail
 function exit_trap() {
     printf 'Test failed: %s\n' "$1"
     rm -rf devcontainers/projects/test1
+    exit 1
 }
 
-trap 'exit_trap "Script interrupted."' INT TERM EXIT
+trap 'exit_trap "Script interrupted."' INT TERM
 
 ./devcontainer new test1
 

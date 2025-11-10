@@ -5,8 +5,8 @@
 #
 # Structure : 
 # 	Root folder : ~./local/share/devcontainers/
-#   Bin folder  : ~./local/bin/devcontainer
 #   Templates   : ~./local/share/devcontainers/templates
+#   Bin folder  : ~./local/bin/devcontainer
 #
 
 set -o errexit
@@ -18,7 +18,7 @@ declare SCRIPT_DIR
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 declare -r DEVCONTAINER_ROOT_FOLDER="devcontainers"
-declare -r TOP_DIR="${SCRIPT_DIR}/${DEVCONTAINER_ROOT_FOLDER}"
+declare -r TOP_DIR="${SCRIPT_DIR}/../${DEVCONTAINER_ROOT_FOLDER}"
 declare -r PROJECTS_TOP_DIR="${TOP_DIR}/projects"
 declare -r TEMPLATES_DIR="${TOP_DIR}/templates"
 
@@ -479,7 +479,6 @@ show_help() {
 		A tool to manage development containers.
 
 		Commands:
-		  init                      Copy .devcontainer folder to the current directory.
 		  new <project_name> [-f]   Create a new project configuration.
 		                            -f, --force: Overwrite existing config files.
 		  edit <project_name> [-c]  Edit a project's .env file, or docker-compose.yml with -c.
@@ -509,9 +508,6 @@ main() {
 	shift || true # Shift arguments, '|| true' prevents exit on no args
 
 	case "${command}" in
-	init)
-		init
-		;;
 	new)
 		new "$@"
 		;;
