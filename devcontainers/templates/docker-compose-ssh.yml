@@ -2,8 +2,10 @@ services:
     maindevcontainer:
         image: "${DEVCONTAINER_IMAGE_NAME:-bash:5}"
         volumes:
-            - workdir:/workdir
-            - home:/home
+            - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/workdir:/workdir
+            - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/${USER}:/home/${USER}
+        ports:
+            - "${SSH_PORT:-22224}:22"
         tmpfs: /tmp:exec,mode=1777
         tty: true
         stdin_open: true
@@ -15,6 +17,3 @@ services:
                 limits:
                     memory: "${RESOURCES_RAM:-2G}"
 
-volumes:
-    home:
-    workdir:

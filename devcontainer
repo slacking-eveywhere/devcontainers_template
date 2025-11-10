@@ -1,0 +1,549 @@
+#!/usr/bin/env bash
+
+#
+# Devcontainer Management Script
+#
+# Structure : 
+# 	Root folder : ~./local/share/devcontainers/
+#   Bin folder  : ~./local/bin/devcontainer
+#   Templates   : ~./local/share/devcontainers/templates
+#
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# --- Global Constants ---
+declare SCRIPT_DIR
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+declare -r DEVCONTAINER_ROOT_FOLDER="devcontainers"
+declare -r TOP_DIR="${SCRIPT_DIR}/${DEVCONTAINER_ROOT_FOLDER}"
+declare -r PROJECTS_TOP_DIR="${TOP_DIR}/projects"
+declare -r TEMPLATES_DIR="${TOP_DIR}/templates"
+
+# --- End Global Constants ---
+
+# --- Utility Functions ---
+
+# A standardized function for printing error messages to stderr.
+# Usage: error "Something went wrong"
+error() {
+	echo "ERROR: ${1}" >&2
+	exit 1
+}
+
+# Checks for the presence of required command-line tools.
+check_prerequisites() {
+	# Check for jq, essential for the 'list' command.
+	if ! command -v jq >/dev/null 2>&1; then
+		error "jq is not installed. Please install it to use the 'list' command."
+	fi
+	# Check for docker, the core dependency.
+	if ! command -v docker >/dev/null 2>&1; then
+		error "Docker is not installed. Please install it to continue."
+	fi
+	# Check for docker compose plugin.
+	if ! docker compose version >/dev/null 2>&1; then
+		error "Docker Compose V2 is not available. Please ensure you are using a recent version of Docker."
+	fi
+}
+
+# A cross-platform function to open a file with the default editor.
+# Falls back to environment variables if GUI openers are not found.
+open_file() {
+	local file="${1}"
+	if command -v xdg-open >/dev/null 2>&1; then
+		xdg-open "${file}"
+	elif command -v open >/dev/null 2>&1; then
+		open "${file}"
+	elif [[ -n "${EDITOR}" ]]; then
+		"${EDITOR}" "${file}"
+	else
+		echo "No suitable file editor found. Please open this file manually: ${file}"
+	fi
+}
+
+load_env_variables() {
+	local env_file="${1}"
+	if [[ -f "${env_file}" ]]; then
+		while IFS='=' read -r name value; do
+			# Skip empty lines and comments
+			if [[ -z "$name" || "$name" =~ ^[[:space:]]*# ]]; then
+				continue
+			fi
+			# Remove leading/trailing whitespace from name and value
+			name=$(echo "$name" | xargs)
+			value=$(echo "$value" | xargs)
+			# Export the variable if both name and value are not empty
+			if [[ -n "$name" && -n "$value" ]]; then
+				export "$name=$value"
+			fi
+		done < <(grep -v '^[[:space:]]*$' "${env_file}" 2>/dev/null || true)
+	else
+		error "Environment file not found: ${env_file}"
+	fi
+}
+
+# --- End Utility Functions ---
+
+# --- Core Functions ---
+
+# Creates a new project configuration.
+# Usage: new <project_name> [-f]
+new() {
+	local project_name=""
+	local force="false"
+
+	# A more robust way to parse mixed positional and optional arguments.
+	while [[ $# -gt 0 ]]; do
+		case "${1}" in
+		-f | --force)
+			force="true"
+			shift
+			;;
+		-*)
+			error "Unknown option: ${1}"
+			;;
+		*)
+			# Assume the first non-option argument is the project name.
+			if [[ -z "${project_name}" ]]; then
+				project_name="${1}"
+			else
+				error "Too many arguments. Expected one project name."
+			fi
+			shift
+			;;
+		esac
+	done
+
+	if [[ -z "${project_name}" ]]; then
+		error "Missing project name. Usage: new <project_name> [-f]"
+	fi
+
+	local project_dir="${PROJECTS_TOP_DIR}/${project_name}"
+	local env_file="${project_dir}/.env"
+	local compose_file="${project_dir}/docker-compose.yml"
+	local volume_dir="${project_dir}/volumes"
+
+	if [[ ! -d "${project_dir}" ]]; then
+		echo "Creating project directory: ${project_dir}"
+		mkdir -p "${project_dir}"
+	fi
+
+	# Create .env file
+	if [[ ! -f "${env_file}" ]] || [[ "${force}" == "true" ]]; then
+		echo "Creating ${env_file}..."
+		cat <<-EOF >"${env_file}"
+			# --- User Configuration ---
+			# Set the username and UID for the devcontainer user.
+			USER=
+			USER_ID=
+
+			# --- Devcontainer Image ---
+			# Specify the Docker image to use for the development environment.
+			DEVCONTAINER_IMAGE_NAME=
+
+			# --- Resource Limits ---
+			# Optional: Define resource limits, e.g., RAM.
+			RESOURCES_RAM=
+			# --- SSH Configuration ---
+			# Optional: Define SSH port for accessing the devcontainer.
+			SSH_PORT=
+			ENABLE_SSH=true
+		EOF
+	else
+		echo "File ${env_file} already exists. Use -f to overwrite."
+	fi
+
+	# Create docker-compose.yml file
+	if [[ ! -f "${compose_file}" ]] || [[ "${force}" == "true" ]]; then
+		echo "Creating ${compose_file}..."
+		cat <<-EOF >"${compose_file}"
+			services:
+			  maindevcontainer:
+			    # This service inherits its base configuration from the template.
+			    # You can add overrides here, such as volume mounts or port mappings.
+			    env_file:
+			      - ${PROJECTS_TOP_DIR}/${project_name}/.env
+		EOF
+	else
+		echo "File ${compose_file} already exists. Use -f to overwrite."
+	fi
+
+	# Create volumes directories
+	if [[ ! -d "${volume_dir}" ]]; then
+		mkdir -p "${volume_dir}"
+	fi
+}
+
+# Edits a project's configuration files.
+# Usage: edit <project_name> [-c]
+edit() {
+	local project_name="${1:-}" # Default to empty string if not provided
+	local edit_compose="false"
+
+	if [[ -z "${project_name}" ]]; then
+		error "Missing project name. Usage: edit <project_name> [-c]"
+	fi
+
+	# Handle optional '-c' flag.
+	if [[ "${2:-}" == "-c" ]]; then
+		edit_compose="true"
+	fi
+
+	local project_dir="${PROJECTS_TOP_DIR}/${project_name}"
+	if [[ ! -d "${project_dir}" ]]; then
+		error "Project directory not found: ${project_dir}"
+	fi
+
+	local env_file="${project_dir}/.env"
+	local compose_file="${project_dir}/docker-compose.yml"
+
+	if [[ "${edit_compose}" == "true" ]]; then
+		echo "Opening Docker Compose file for project '${project_name}'..."
+		open_file "${compose_file}"
+	else
+		echo "Opening .env file for project '${project_name}'..."
+		open_file "${env_file}"
+	fi
+}
+
+# Displays the fully merged Docker Compose configuration.
+inspect() {
+	local project_name="${1:-}"
+	if [[ -z "${project_name}" ]]; then
+		error "Missing project name. Usage: inspect <project_name>"
+	fi
+
+	local project_compose_file="${PROJECTS_TOP_DIR}/${project_name}/docker-compose.yml"
+	if [[ ! -f "${project_compose_file}" ]]; then
+		error "Project compose file not found at ${project_compose_file}"
+	fi
+
+	local PROJECT_NAME="${project_name}"
+
+	export PROJECTS_TOP_DIR
+	export PROJECT_NAME
+
+	load_env_variables "${PROJECTS_TOP_DIR}/${project_name}/.env"
+	
+
+	docker compose \
+		-f "${TEMPLATES_DIR}/docker-compose-ssh.yml" \
+		-f "${project_compose_file}" \
+		config
+
+	unset PROJECT_NAME
+}
+
+# Runs a devcontainer.
+# Usage: run -p <project_name> [-s <ssh_public_key_path>]
+run() {
+	local ssh_public_key=""
+	local project_name=""
+
+	# Use getopts for robust option parsing.
+	while getopts ":s:p:" opt; do
+		case ${opt} in
+		s) ssh_public_key="${OPTARG}" ;;
+		p) project_name="${OPTARG}" ;;
+		\?) error "Invalid option: -${OPTARG}" ;;
+		:) error "Option -${OPTARG} requires an argument." ;;
+		esac
+	done
+
+	if [[ -z "${project_name}" ]]; then
+		error "Project name is required. Use the -p flag."
+	fi
+
+	local project_compose_file="${PROJECTS_TOP_DIR}/${project_name}/docker-compose.yml"
+	if [[ ! -f "${project_compose_file}" ]]; then
+		error "Project compose file not found at ${project_compose_file}"
+	fi
+
+	load_env_variables "${PROJECTS_TOP_DIR}/${project_name}/.env"
+
+	local volume_dir="${PROJECTS_TOP_DIR}/${project_name}/volumes"
+	for dir_name in "${USER}" "workdir"; do
+		local dir_path="${volume_dir}/${dir_name}"
+		if [[ ! -d "${dir_path}" ]]; then
+			mkdir -p "${dir_path}"
+		fi
+	done
+	# Correcting volumes folders rights
+	chown "${USER}":"${USER}" "${volume_dir}/${USER}"
+	chown "${USER}":"${USER}" "${volume_dir}/workdir"
+
+	printf 'Starting devcontainer for project %s...\n' "${project_name}"
+	local PROJECT_NAME="${project_name}"
+
+	export PROJECTS_TOP_DIR
+	export PROJECT_NAME
+
+	docker compose \
+		-f "${TEMPLATES_DIR}/docker-compose-ssh.yml" \
+		-f "${project_compose_file}" \
+		-p "${project_name}" \
+		up -d 
+
+	unset PROJECT_NAME
+
+	# Find the running container ID. This is more robust than hardcoding the service name.
+	# It assumes the project name is the prefix for the container.
+	local container_id
+	container_id=$(docker ps -q --filter "name=${project_name}-maindevcontainer-1")
+
+	if [[ -z "${container_id}" ]]; then
+		error "Failed to find a running container for project '${project_name}'. Check 'docker ps'."
+	fi
+
+	printf 'Container is starting with ID: %s...\n' "${container_id}"
+
+	# Configure container with user settings.
+	local dev_user
+	dev_user=$(docker exec "${container_id}" bash -c 'echo $USER')
+
+	if [[ -z "${dev_user}" ]]; then
+		error "Could not retrieve username from the container."
+	fi
+
+	echo "Devcontainer user detected: ${dev_user}"
+
+
+	docker exec -it --user "$USER_ID":"$USER_ID" "${container_id}" bash -c '
+	set -e
+
+	# Zoxide repo
+	declare -r ZOXIDE_REPO=https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh
+	declare -r DOTFILE_REPO=https://github.com/slacking-eveywhere/dotfiles.git
+
+	if [[ ! -f "$HOME"/.installed ]]; then
+		# Install fonts
+		FONT_DIR="$HOME"/.local/share/fonts
+		mkdir -p "$FONT_DIR"/.local/share/fonts
+		tar -xf "$HOME"/JetBrainsMono.tar.xz -C "$FONT_DIR"
+		rm -rf "$HOME"/JetBrainsMono.tar.xz
+
+		# Install zoxide globally
+		curl -sSfL "$ZOXIDE_REPO" | sh
+
+		cd "$HOME"
+		fc-cache -fv
+
+		if [[ -n "$DOTFILE_REPO" ]]; then
+			if [[ ! -d .dotfiles ]]; then
+				git clone "$DOTFILE_REPO" .dotfiles
+			fi
+
+			cd .dotfiles
+			git pull
+			stow --target="$HOME" --adopt -- */
+			cd -
+		fi
+
+		touch "$HOME"/.installed
+	fi
+
+	if [[ -n "$DOCKER_GID" ]]; then
+		if getent group docker >/dev/null; then
+			sudo groupmod -g "$DOCKER_GID" docker || true
+		else
+			sudo groupadd -g "$DOCKER_GID" docker
+		fi
+		sudo usermod -aG docker $USER
+	fi
+
+	# Remove useless and strange symlink fucking up with docker buildx.
+	if [[ -f "$HOME"/.docker/cli-plugins/docker-buildx ]]; then
+		sudo rm -rf "$HOME"/.docker/cli-plugins/docker-buildx
+	fi
+
+	if [[ -f "/usr/sbin/sshd" ]] && [[ "$ENABLE_SSH" == "true" ]]; then
+		printf "Starting sshd as daemon for remote server on port %s ...\n" "$SSH_PORT"
+		mkdir -p "$HOME"/.ssh
+		touch "$HOME"/.ssh/authorized_keys
+
+		if [[ -z $(ls -A /etc/ssh/ssh_host_* 2>/dev/null) ]]; then
+			ssh-keygen -A
+		fi
+
+		sudo /usr/sbin/sshd
+	fi
+	'
+
+	# Copy gitconfig if it exists.
+	if [[ -f "${HOME}/.gitconfig" ]]; then
+		printf "Copying local .gitconfig to container...\n"
+		docker cp "${HOME}/.gitconfig" "${container_id}:/home/${dev_user}/.gitconfig"
+	fi
+
+	# Copy and authorize SSH public key if provided.
+	if [[ -n "${ssh_public_key}" ]]; then
+		if [[ ! -f "${ssh_public_key}" ]]; then
+			error "SSH public key file not found at: ${ssh_public_key}"
+		fi
+
+		printf "Configuring SSH access...\n"
+		
+		local user_ssh_dir="/home/${dev_user}/.ssh"
+		local pub_key_path="${user_ssh_dir}/id_rsa.pub"
+		local authorized_keys_path="${user_ssh_dir}/authorized_keys"
+
+		docker cp "${ssh_public_key}" "${container_id}:${pub_key_path}"
+		# Run multiple commands inside the container for setup.
+		docker exec --user "$USER_ID":"$USER_ID" "${container_id}" bash -c "
+            set -e # Exit on error within the exec'd script
+            chown ${dev_user}:${dev_user} '${pub_key_path}'
+            cat '${pub_key_path}' >> '${authorized_keys_path}'
+            chmod 600 '${authorized_keys_path}'
+            chown ${dev_user}:${dev_user} '${authorized_keys_path}'
+        "
+		echo "SSH key configured."
+	fi
+	printf "Container is ready.\n"
+}
+
+# Stops a running devcontainer project.
+# Usage: stop -p <project_name>
+stop() {
+	local project_name="$1"
+
+	if [[ -z "${project_name}" ]]; then
+		error "Project name is required. Use the -p flag."
+	fi
+
+	echo "Stopping devcontainer for project '${project_name}'..."
+	# Using --project-name (-p) ensures we target the correct set of containers.
+	docker compose -p "${project_name}" down
+	echo "Project '${project_name}' stopped."
+}
+
+# Connects to a running devcontainer via SSH.
+# Usage: connect -h <ssh_host> [-p <port>]
+connect() {
+	local port="22" # Default SSH port
+	local ssh_host="localhost"
+
+	while getopts ":p:h:" opt; do
+		case ${opt} in
+		p) port="${OPTARG}" ;;
+		h) ssh_host="${OPTARG}" ;;
+		\?) error "Invalid option: -${OPTARG}" ;;
+		:) error "Option -${OPTARG} requires an argument." ;;
+		esac
+	done
+
+	if [[ -z "${ssh_host}" ]]; then
+		error "SSH host is required. Use the -h flag."
+	fi
+
+	printf 'Connecting to %s on port %s...\n' "${ssh_host}" "${port}"
+
+	# -A enables forwarding of the authentication agent connection.
+	# Because the devcontainer must access private repos using the host's SSH keys or things like this.
+	ssh -A -p "${port}" "${ssh_host}"
+}
+
+# Lists all running devcontainers managed by this script.
+list_containers() {
+	local containers=()
+	while IFS=$'\t' read -r name status; do
+		containers+=("${name} | ${status}")
+	done < <(docker compose ls --format json |
+		jq -r \
+			--arg folder "${DEVCONTAINER_ROOT_FOLDER}" \
+			'.[] | select(.ConfigFiles | contains($folder)) | "\(.Name)\t\(.Status)"')
+
+	while read -r folder; do
+		local project_name
+		project_name=$(basename "${folder}")
+
+		for container in "${containers[@]}"; do
+			if [[ "${container}" == "${project_name} "* ]]; then
+				echo "Project: ${project_name} | Status: ${container#*| }"
+			fi
+		done
+	done < <(find "${PROJECTS_TOP_DIR}" -maxdepth 1 -type d -not -path "${PROJECTS_TOP_DIR}")
+
+	if ! printf '%s\n' "${containers[@]}" | grep -q "^${project_name} "; then
+		echo "Project: ${project_name} | Status: Not Running"
+	fi
+}
+
+# Displays the help message.
+show_help() {
+	cat <<-EOF
+		Usage: devcontainer.sh <command> [<args>]
+
+		A tool to manage development containers.
+
+		Commands:
+		  init                      Copy .devcontainer folder to the current directory.
+		  new <project_name> [-f]   Create a new project configuration.
+		                            -f, --force: Overwrite existing config files.
+		  edit <project_name> [-c]  Edit a project's .env file, or docker-compose.yml with -c.
+		  inspect <project_name>    Show the merged docker-compose configuration.
+		  run -p <name> [-s <key>]  Run a devcontainer for a project.
+		                            -p: Project name (required).
+		                            -s: Path to SSH public key (optional).
+		  stop -p <name>            Stop the devcontainer for a project.
+		  list                      List running devcontainers managed by this script.
+		  connect -h <host> [-p <#>] Connect to a running devcontainer via SSH.
+		                            -h: SSH host (required).
+		                            -p: Port (defaults to 22).
+		  help                      Show this help message.
+	EOF
+}
+
+# --- Main Execution ---
+
+# The main function acts as the script's entry point.
+main() {
+	# Ensure the base directories exist before running any command.
+	mkdir -p "${PROJECTS_TOP_DIR}"
+
+	# The first argument determines the command to run.
+	# Using "${1:-help}" defaults to 'help' if no command is provided.
+	local command="${1:-help}"
+	shift || true # Shift arguments, '|| true' prevents exit on no args
+
+	case "${command}" in
+	init)
+		init
+		;;
+	new)
+		new "$@"
+		;;
+	edit)
+		edit "$@"
+		;;
+	inspect)
+		check_prerequisites
+		inspect "$@"
+		;;
+	run)
+		run "$@"
+		;;
+	stop)
+		stop "$@"
+		;;
+	list)
+		check_prerequisites
+		list_containers
+		;;
+	connect)
+		connect "$@"
+		;;
+	help)
+		show_help
+		;;
+	*)
+		error "Unknown command: ${command}"
+		;;
+	esac
+}
+
+# This construct ensures that the script's execution starts at the main function.
+# It also passes all script arguments to main.
+main "$@"
