@@ -8,7 +8,7 @@ if [[ -d "$PROJECTS_TOP_DIR" ]]; then
 	git pull
 else
 	cd "$HOME"/.local/share || exit
-	git clone --no-checkout https://github.com/slacking-eveywhere/devcontainers_template.git
+	git clone --no-checkout https://github.com/slacking-eveywhere/devcontainers_template.git devcontainers
 	git sparse-checkout init
 	git sparse-checkout set devcontainers bin
 	git checkout main
