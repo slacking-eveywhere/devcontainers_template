@@ -19,3 +19,5 @@ RUN set -e ; \
 RUN set -e ; \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+USER skell

@@ -1,0 +1,4 @@
+# Install bash
+ARG REGISTRY=""
+ARG COMMON_VERSION="latest"
+FROM ${REGISTRY}common:${COMMON_VERSION} AS base

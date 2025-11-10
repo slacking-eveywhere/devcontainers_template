@@ -20,4 +20,4 @@ RUN set -e ; \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-FROM ${REGISTRY}common-ssh:${COMMON_VERSION} AS base-ssh
+USER skell

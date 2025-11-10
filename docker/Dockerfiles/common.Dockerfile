@@ -28,36 +28,38 @@ RUN set -e ; \
     mkdir -p /root/.cache ; \
     mkdir -p /root/.config ; \
     mkdir -p /root/.local ; \
-    touch /root/.ready
+    touch /tmp/.ready
 
 # Install common packages
 RUN set -e ; \
     apt-get update ; \
     apt-get -y install \
+    age \
     curl \
     fontconfig \
-    xz-utils \
-    shellcheck \
-    shfmt \
-    age \
-    lazygit \
     jq \
+    lazygit \
+    locales \
+    openssh-server \
     fzf \
     git \
     gpg \
     make \
-    locales \
+    shellcheck \
+    shfmt \
     stow \
+    sudo \
     tree \
     tzdata \
     unzip \
     vim \
     wget \
+    xz-utils \
     zip \
-    sudo \
     zsh ;
 
-RUN wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY} -O /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+RUN set -e ; \
+    wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY} -O /usr/local/bin/yq && chmod +x /usr/local/bin/yq
 
 # Install docker for dod bevause it's very neat to dod
 RUN set -e ; \
@@ -81,27 +83,32 @@ RUN set -e ; \
     apt-get clean ; \
     rm -rf /var/lib/apt/lists/*
 
+# Configure ssh server
+RUN set -e  ; \
+    sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config ; \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config ; \
+    sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords no/' /etc/ssh/sshd_config ; \
+    ssh-keygen -A
+
+# Allow sudo without password for all users (it's a devcontainer after all, so don't care much about security here)
+RUN set -e ; \
+    useradd \
+		--shell /usr/bin/zsh \
+		--home-dir "/home/skell" \
+		--uid 1000 \
+		"skell" ; \
+    mkdir -p /home/skell ; \
+	chown skell:skell /home/skell ; \
+    echo "skell ALL=(ALL:ALL) NOPASSWD: ALL" | tee "/etc/sudoers.d/users" > /dev/null ; \
+    chmod 440 /etc/sudoers.d/ 
+
 # Download fonts
 RUN set -e ; \
-    curl -OL --output-dir /root https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
+    curl -OL --output-dir /home/skell https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
 
-# Gosu installation for host user id adaptation
-RUN set -e ; \
-    dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-    wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-$dpkgArch"; \
-    wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-$dpkgArch.asc"; \
-    \
-    # verify the signature
-    export GNUPGHOME="$(mktemp -d)"; \
-    gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
-    gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
-    gpgconf --kill all; \
-    rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-    \
-    chmod +x /usr/local/bin/gosu; \
-    # verify that the binary works
-    gosu --version; \
-    gosu nobody true
+# entrypoint minimaliste qui adapte l'uid/gid
+# docker exec pour post install tous les elements en plus pour que l'utilisateur ait son beau shell
+# USER  et USER_ID deviennent optionnels dans l'entrypoint. ces droits sont à prendre en compte que dans un devcontainer sur vscode.
 
 # Copy custom locales because some shits can happens
 COPY locale.conf /etc/default/locale.conf
@@ -111,7 +118,6 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 # Add docker entrypoint and set locale
 RUN set -e ; \
-    chmod +x /docker-entrypoint.sh ; \
     mkdir /workdir ; \
     dpkg-reconfigure locales ; \
     sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen ; \
@@ -122,17 +128,3 @@ ENTRYPOINT [ "/docker-entrypoint.sh" ]
 
 # Expose some ports to host by default.
 EXPOSE 8080 8081 8082 8083 8084 8085
-
-# Install with SSH server
-FROM common AS common-ssh
-
-RUN set -e ; \
-    apt-get update ; \
-    apt-get install -y \
-    openssh-server ; \
-    ssh-keygen -A ; \
-    sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config ; \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config ; \
-    sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords no/' /etc/ssh/sshd_config ; \
-    apt-get clean ; \
-    rm -rf /var/lib/apt/lists/*

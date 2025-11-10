@@ -15,6 +15,4 @@ RUN set-e ; \
     mkdir -p ${TMPDIR} ; \
     chmod 2777 ${TMPDIR}
 
-FROM ${REGISTRY}common-ssh:${COMMON_VERSION} AS base-ssh
-
-COPY --from=golang /usr/local /usr/local
+USER skell
