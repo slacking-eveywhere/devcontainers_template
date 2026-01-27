@@ -94,17 +94,17 @@ RUN set -e  ; \
 RUN set -e ; \
     useradd \
 		--shell /usr/bin/zsh \
-		--home-dir "/home/skell" \
-		--uid 1000 \
+		--home-dir "/var/local/skell" \
+		--uid 1000500 \
 		"skell" ; \
-    mkdir -p /home/skell ; \
-	chown skell:skell /home/skell ; \
+    mkdir -p /var/local/skell ; \
+	chown skell:skell /var/local/skell ; \
     echo "skell ALL=(ALL:ALL) NOPASSWD: ALL" | tee "/etc/sudoers.d/users" > /dev/null ; \
     chmod 440 /etc/sudoers.d/ 
 
-# Download fonts
-RUN set -e ; \
-    curl -OL --output-dir /home/skell https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
+# # Download fonts
+# RUN set -e ; \
+#     curl -OL --output-dir /var/local/skell https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
 
 # entrypoint minimaliste qui adapte l'uid/gid
 # docker exec pour post install tous les elements en plus pour que l'utilisateur ait son beau shell
@@ -115,6 +115,7 @@ COPY locale.conf /etc/default/locale.conf
 
 # Copy docker entrypoint to the root
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY post-install.sh /usr/local/bin/post-install.sh
 
 # Add docker entrypoint and set locale
 RUN set -e ; \

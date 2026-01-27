@@ -41,9 +41,10 @@ if [[ "$COMMON" == "true" ]]; then
 fi
 
 if [[ -z "$LANGUAGE_NAME" ]]; then
-	echo "No language name found."
+	echo "No language name found. Building all projects."
 	"${CMD[@]}"
 else
+    echo "Building $LANGUAGE_NAME"
 	CMD+=("$LANGUAGE_NAME")
 	"${CMD[@]}"
 fi

@@ -11,7 +11,7 @@ group "default" {
 }
 
 group "golang" {
-    targets = ["go-1-23-4"]
+    targets = ["go-1-25-4"]
 }
 
 group "python" {
@@ -41,16 +41,16 @@ target "bash" {
     tags = ["${REGISTRY}devcontainer-bash:latest"]
 }
 
-target "go-1-23-4" {
+target "go-1-25-4" {
     context = "docker"
     dockerfile = "Dockerfiles/golang.Dockerfile"
     targets = ["base"]
     args = {
-        GO_VERSION = "1.23.4",
+        GO_VERSION = "1.25.4",
         REGISTRY = REGISTRY,
         COMMON_VERSION = COMMON_VERSION
     }
-    tags = ["${REGISTRY}devcontainer-golang:1.23.4"]
+    tags = ["${REGISTRY}devcontainer-golang:1.25.4"]
 }
 
 target "python-3-13" {
