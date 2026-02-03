@@ -3,7 +3,7 @@
 #
 # Devcontainer Management Script
 #
-# Structure : 
+# Structure :
 # 	Root folder : ~/.local/share/devcontainer/
 #   Templates   : ~/.local/share/devcontainer/templates
 #   Projects    : ~/.local/share/devcontainer/projects
@@ -19,12 +19,12 @@ set -o pipefail
 # Determine if we're running from the development tree or from an installed location
 detect_environment() {
 	local script_dir
-	script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-	
+	script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+
 	# Check if we're in the development structure (bin/ directory exists alongside devcontainer/)
 	local parent_dir
 	parent_dir="$(dirname "${script_dir}")"
-	
+
 	if [[ -d "${parent_dir}/devcontainer" && -d "${script_dir}" && "$(basename "${script_dir}")" == "bin" ]]; then
 		# Development mode: running from project structure
 		echo "dev:${parent_dir}"
@@ -261,7 +261,6 @@ inspect() {
 	export PROJECT_NAME
 
 	load_env_variables "${PROJECTS_TOP_DIR}/${project_name}/.env"
-	
 
 	docker compose \
 		-f "${TEMPLATES_DIR}/docker-compose-ssh.yml" \
@@ -306,8 +305,8 @@ run() {
 		fi
 	done
 	# Correcting volumes folders rights
-	chown "${USER}":"${USER}" "${volume_dir}/${USER}"
-	chown "${USER}":"${USER}" "${volume_dir}/workdir"
+	chown "$USER" "$volume_dir/$USER"
+	chown "$USER" "$volume_dir/workdir"
 
 	printf 'Starting devcontainer for project %s...\n' "${project_name}"
 	local PROJECT_NAME="${project_name}"
@@ -319,7 +318,7 @@ run() {
 		-f "${TEMPLATES_DIR}/docker-compose-ssh.yml" \
 		-f "${project_compose_file}" \
 		-p "${project_name}" \
-		up -d 
+		up -d
 
 	unset PROJECT_NAME
 
@@ -344,7 +343,6 @@ run() {
 
 	echo "Devcontainer user detected: ${dev_user}"
 
-
 	docker exec -it --user "$USER_ID":"$USER_ID" "${container_id}" bash -c '
 	set -e
 
@@ -355,7 +353,7 @@ run() {
 	if [[ ! -f "$HOME"/.installed ]]; then
 		# Install fonts
 		FONT_DIR="$HOME"/.local/share/fonts
-		mkdir -p "$FONT_DIR"/.local/share/fonts
+		mkdir -p "$FONT_DIR"
 		if [[ -f "$HOME"/JetBrainsMono.tar.xz ]]; then
 			tar -xf "$HOME"/JetBrainsMono.tar.xz -C "$FONT_DIR"
 			rm -rf "$HOME"/JetBrainsMono.tar.xz
@@ -421,7 +419,7 @@ run() {
 		fi
 
 		printf "Configuring SSH access...\n"
-		
+
 		local user_ssh_dir="/home/${dev_user}/.ssh"
 		local pub_key_path="${user_ssh_dir}/id_rsa.pub"
 		local authorized_keys_path="${user_ssh_dir}/authorized_keys"
@@ -430,10 +428,8 @@ run() {
 		# Run multiple commands inside the container for setup.
 		docker exec --user "$USER_ID":"$USER_ID" "${container_id}" bash -c "
             set -e # Exit on error within the exec'd script
-            chown ${dev_user}:${dev_user} '${pub_key_path}'
             cat '${pub_key_path}' >> '${authorized_keys_path}'
             chmod 600 '${authorized_keys_path}'
-            chown ${dev_user}:${dev_user} '${authorized_keys_path}'
         "
 		echo "SSH key configured."
 	fi
