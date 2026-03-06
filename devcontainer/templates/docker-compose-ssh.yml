@@ -1,19 +1,18 @@
 services:
-    maindevcontainer:
-        image: "${DEVCONTAINER_IMAGE_NAME:-bash:5}"
-        volumes:
-            - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/workdir:/workdir
-            - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/${USER}:/home/${USER}
-        ports:
-            - "${SSH_PORT:-22224}:22"
-        tmpfs: /tmp:exec,mode=1777
-        tty: true
-        stdin_open: true
-        command: ["sleep", "infinity"]
-        deploy:
-            resources:
-                reservations:
-                    memory: "${RESOURCES_RAM:-2G}"
-                limits:
-                    memory: "${RESOURCES_RAM:-2G}"
-
+  maindevcontainer:
+    image: "${DEVCONTAINER_IMAGE_NAME:-bash:5}"
+    volumes:
+      - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/workdir:/workdir
+      - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/${USER}:/home/${USER}
+    ports:
+      - "${SSH_PORT:-22224}:22"
+    tmpfs: /tmp:exec,mode=1777
+    tty: true
+    stdin_open: true
+    command: ["sleep", "infinity"]
+    deploy:
+      resources:
+        reservations:
+          memory: "${RESOURCES_RAM:-2G}"
+        limits:
+          memory: "${RESOURCES_RAM:-2G}"

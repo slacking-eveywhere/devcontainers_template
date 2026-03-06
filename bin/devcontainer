@@ -183,6 +183,7 @@ new() {
 			RESOURCES_RAM=
 			# --- SSH Configuration ---
 			# Optional: Define SSH port for accessing the devcontainer.
+			HOSTNAME=
 			SSH_PORT=
 			ENABLE_SSH=true
 		EOF
