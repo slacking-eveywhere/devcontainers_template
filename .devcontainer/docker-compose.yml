@@ -1,0 +1,23 @@
+services:
+  app:
+    image: "${DEVCONTAINER_IMAGE_NAME}"
+    env_file:
+      - .env
+    volumes:
+      - ../:/workdir:cached
+      - home:/home
+      - type: tmpfs
+        target: /tmp
+    network_mode: host
+    tty: true
+    stdin_open: true
+    command: ["sleep", "infinity"]
+    deploy:
+      resources:
+        reservations:
+          memory: "${RESOURCES_RAM:-2G}"
+        limits:
+          memory: "${RESOURCES_RAM:-2G}"
+
+volumes:
+  home:
