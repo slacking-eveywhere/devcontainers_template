@@ -9,9 +9,9 @@
       "settings": {
         "remote": {
           "restoreForwardedPorts": true,
-          "localPortHost": "0.0.0.0",
-        },
-      },
-    },
-  },
+          "localPortHost": "0.0.0.0"
+        }
+      }
+    }
+  }
 }
