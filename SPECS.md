@@ -270,19 +270,63 @@ devcontainer run broken-project
 # Once running, verify the project is healthy
 devcontainer inspection broken-project
 ```
+## Common functions
+- `validate_project_name(name)`: Validates that the project name is valid (e.g., no special characters, not empty).
+- `project_exists(name)`: Checks if a project with the given name already exists.
+- `load_project_config(name)`: Loads the project configuration from the .env file and docker-compose.yml file.
+- `save_project_config(name, config)`: Saves the project configuration to the .env file and docker-compose.yml file.
+
 ## Software pipeline
 
 ### 1. Create new project
-- check if project with name exists
+- check if a project with name exists
 - if project exists and `force` argument is not passed, throw error
 - if project exits and `force` argument is passed OR project does not exists, create the projet.
 - create folder and template skell for `.env` file, `docker-compose.yml` file or `devcontainer.json` file.
 
 ### 2. Edit a project
-- Check if if project with name exists, if not throw error else continue
+- Check if a project with name exists, if not throw error else continue
 - Open `.env` file if no argument is passed.
 - if `-c` is passed, open the `docker-compose.yml` file.
 - The editor is the default xdg editor in terminal or desktop software like code, zed, whatever
 - if the `-q` argument is passed, do not reload the container, else reload container with new configuration
 
-### 3.
+### 3. Inspect a project
+- Check if a project with name exists, if not throw error else continue
+- Parse configuration file (`.env`, `docker-compose.yml`).
+- If configuration file does not exits, throw errors. A valid project is a project with configuration file
+- Display information from configuration file as terminal output.
+
+### 4. List all projects
+- Read all projects in the projects directory
+- For each project, parse the configuration file and get the status of the container (running, stopped, error)
+- Display the list of projects as a table in the terminal with name, status, configured ports, and configured image name.
+- If no projects exist, display an empty table.
+
+### 5. Run a project
+- Check if a project with name exists, if not throw error else continue
+- Parse configuration file (`.env`, `docker-compose.yml`).
+- If configuration file does not exits, throw errors. A valid project is a project with configuration file
+- If `-s` argument is passed, validate the SSH public key and copy it to the container's authorized_keys using `docker cp`.
+- Start the container in detached mode.
+- If the container fails to start, display a summary of the error.
+- If the container starts successfully, display a summary of the startup.
+
+### 6. Stop a project
+- Check if a project with name exists, if not throw error else continue
+- If `-d` or `--detach` is passed, stop the container and return immediately.
+- If `-d` or `--detach` is not passed, stop the container and wait for it to stop before returning.
+- If `-f` or `--force` is passed, use the docker stop force option to kill the container.
+
+### 7. Connect to a project
+- Check if a project with name exists, if not throw error else continue
+- Parse the `.env` file to get the SSH host and port. If one is missing, use the default but display a warning about the use of default values.
+- If the `.env` file parsing fails, display an error.
+- Attempt to connect to the container via SSH using the specified key or the local SSH agent.
+- If a connection error occurs, display an error message.
+
+### 8. Run a command in a running project
+- Check if a project with name exists, if not throw error else continue
+- Check if the project is running, if not throw error else continue
+- Run the specified command in the container using `docker exec` or SSH.
+- If the command execution fails, display an error message.
