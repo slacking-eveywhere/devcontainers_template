@@ -7,7 +7,7 @@ variable "COMMON_VERSION" {
 }
 
 group "default" {
-    targets = ["golang", "python", "rust"]
+    targets = ["golang", "python", "rust", "bash"]
 }
 
 group "golang" {
@@ -16,6 +16,14 @@ group "golang" {
 
 group "python" {
     targets = ["python-3-13"]
+}
+
+group "bash" {
+    targets = ["bash"]
+}
+
+group "rust" {
+    targets = ["rust"]
 }
 
 target "common" {
