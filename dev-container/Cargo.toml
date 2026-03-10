@@ -1,0 +1,28 @@
+[package]
+name = "dev-container"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Devcontainer lifecycle manager"
+
+[[bin]]
+name = "dev-container"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", default-features = false, features = ["derive", "std", "help", "usage", "error-context"] }
+anyhow = { version = "1", default-features = false, features = ["std"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.dev]
+opt-level = 0
+debug = true
