@@ -44,6 +44,10 @@ if [[ -n "$DOCKER_GID" ]]; then
     sudo usermod -aG docker "$USER"
 fi
 
+if [[ -d "$HOME/.cargo" ]]; then
+    source "$HOME/.cargo/env"
+fi
+
 # Remove useless and strange symlink fucking up with docker buildx.
 if [[ -f "$HOME"/.docker/cli-plugins/docker-buildx ]]; then
     sudo rm -rf "$HOME"/.docker/cli-plugins/docker-buildx

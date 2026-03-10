@@ -47,6 +47,11 @@ useradd \
 	'$USER'
 mkdir -p '$HOME'
 chown '$USER':'$USER' '$HOME' '$WORKDIR'
+
+if [[ -d /root/.cargo ]] && [[ -d /root/.rustup ]]; then
+    cp -R /root/.cargo /root/.rustup '$HOME'
+    chown -R '$USER':'$USER' '$HOME'/.cargo '$HOME'/.rustup
+fi
 "
 
 exec "$@"
