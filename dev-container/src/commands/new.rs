@@ -33,10 +33,34 @@ services:
       - .env
 ";
 
+const COMPOSE_BASE_TEMPLATE: &str = r#"# docker compose file that is immutable and can be overwritten by COMPOSE_TEMPLATE
+services:
+  maindevcontainer:
+    image: "${DEVCONTAINER_IMAGE_NAME:-bash:5}"
+    volumes:
+      - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/workdir:/workdir
+      - ${PROJECTS_TOP_DIR}/${PROJECT_NAME}/volumes/${USER}:/home/${USER}
+    ports:
+      - "${SSH_PORT:-22224}:22"
+    tmpfs: /tmp:exec,mode=1777
+    tty: true
+    stdin_open: true
+    command: ["sleep", "infinity"]
+    deploy:
+      resources:
+        reservations:
+          memory: "${RESOURCES_RAM:-2G}"
+        limits:
+          memory: "${RESOURCES_RAM:-2G}"
+
+"#;
+
 pub fn execute(name: &str, force: bool) -> Result<()> {
     validate_project_name(name)?;
 
     let paths = ProjectPaths::resolve(name)?;
+
+    ensure_base_template(&paths)?;
 
     if project_exists(&paths) && !force {
         bail!(
@@ -64,6 +88,17 @@ pub fn execute(name: &str, force: bool) -> Result<()> {
         "Next: edit the configuration then run 'dev-container run {}'",
         name
     );
+
+    Ok(())
+}
+
+fn ensure_base_template(paths: &ProjectPaths) -> Result<()> {
+    std::fs::create_dir_all(&paths.templates_dir)?;
+
+    let base_compose = paths.templates_dir.join("docker-compose-ssh.yml");
+    if !base_compose.exists() {
+        std::fs::write(&base_compose, COMPOSE_BASE_TEMPLATE)?;
+    }
 
     Ok(())
 }
