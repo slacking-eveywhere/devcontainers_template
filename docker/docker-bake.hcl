@@ -15,7 +15,7 @@ group "golang" {
 }
 
 group "python" {
-    targets = ["python-3-13"]
+    targets = ["python-3-13", "python-3-14"]
 }
 
 group "bash" {
@@ -73,6 +73,18 @@ target "python-3-13" {
     tags = ["${REGISTRY}devcontainer-python:3.13"]
 }
 
+target "python-3-14" {
+    context = "docker"
+    dockerfile = "Dockerfiles/python.Dockerfile"
+    targets = ["base"]
+    args = {
+        PYTHON_VERSION = "3.14",
+        REGISTRY = REGISTRY,
+        COMMON_VERSION = COMMON_VERSION
+    }
+    tags = ["${REGISTRY}devcontainer-python:3.14"]
+}
+
 target "rust" {
     context = "docker"
     dockerfile = "Dockerfiles/rust.Dockerfile"
@@ -82,4 +94,16 @@ target "rust" {
         COMMON_VERSION = COMMON_VERSION
     }
     tags = ["${REGISTRY}devcontainer-rust:latest"]
+}
+
+target "ansible" {
+    context = "docker"
+    dockerfile = "Dockerfiles/ansible.Dockerfile"
+    targets = ["base"]
+    args = {
+        REGISTRY = REGISTRY,
+        COMMON_VERSION = COMMON_VERSION
+        ANSIBLE_VERSION="13.5.0"
+    }
+    tags = ["${REGISTRY}devcontainer-ansible:13.5.0"]
 }
