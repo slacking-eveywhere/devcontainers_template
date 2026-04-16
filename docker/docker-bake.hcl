@@ -6,6 +6,10 @@ variable "COMMON_VERSION" {
     default = "trixie-slim"
 }
 
+group "common" {
+    targets = ["common-trixie", "common-forky"]
+}
+
 group "default" {
     targets = ["golang", "python", "rust", "bash"]
 }
@@ -26,7 +30,7 @@ group "rust" {
     targets = ["rust"]
 }
 
-target "common" {
+target "common-trixie" {
     context = "docker"
     dockerfile = "Dockerfiles/common.Dockerfile"
     targets = ["common"]
@@ -36,6 +40,18 @@ target "common" {
         GOSU_VERSION = "1.17"
     }
     tags = ["${REGISTRY}common:trixie-slim"]
+}
+
+target "common-forky" {
+    context = "docker"
+    dockerfile = "Dockerfiles/common.Dockerfile"
+    targets = ["common"]
+    args = {
+        REGISTRY = REGISTRY
+        DEBIAN_VERSION = "forky-slim"
+        GOSU_VERSION = "1.17"
+    }
+    tags = ["${REGISTRY}common:forky-slim"]
 }
 
 target "bash" {
@@ -80,7 +96,7 @@ target "python-3-14" {
     args = {
         PYTHON_VERSION = "3.14",
         REGISTRY = REGISTRY,
-        COMMON_VERSION = COMMON_VERSION
+        COMMON_VERSION = "forky-slim"
     }
     tags = ["${REGISTRY}devcontainer-python:3.14"]
 }

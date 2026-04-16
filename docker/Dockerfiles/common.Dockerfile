@@ -1,7 +1,7 @@
 # Debian image as base (unstable for newest software).
 
 ARG REGISTRY=""
-ARG DEBIAN_VERSION="trixie-slim"
+ARG DEBIAN_VERSION="forky-slim"
 ARG GOSU_VERSION="1.17"
 FROM debian:${DEBIAN_VERSION} AS common
 
@@ -69,7 +69,7 @@ RUN set -e ; \
     # Add the repository to Apt sources:
     echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    $(. /etc/os-release && echo trixie) stable" | \
     tee /etc/apt/sources.list.d/docker.list > /dev/null ; \
     apt-get update ; \
     apt-get install -y --no-install-recommends \
@@ -100,7 +100,7 @@ RUN set -e ; \
     mkdir -p /var/local/skell ; \
 	chown skell:skell /var/local/skell ; \
     echo "skell ALL=(ALL:ALL) NOPASSWD: ALL" | tee "/etc/sudoers.d/users" > /dev/null ; \
-    chmod 440 /etc/sudoers.d/ 
+    chmod 440 /etc/sudoers.d/
 
 # # Download fonts
 # RUN set -e ; \
